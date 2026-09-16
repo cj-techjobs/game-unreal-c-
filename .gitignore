@@ -1,0 +1,71 @@
+# Unreal-generated caches and working data, including nested projects/plugins.
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Local recovery archives created before project cleanup.
+/.cleanup-backups/
+
+# Map build data, including nested projects.
+*_BuiltData.uasset
+
+# Binary and build folders at every level, including nested projects/plugins.
+Binaries/
+Build/
+
+# Local Fab download catalog/cache found inside this project's Content folder.
+/Content/VaultCache/
+
+# Visual Studio / Rider local state and generated IDE project files.
+.vs/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.sln.docstates
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.DotSettings.user
+*.xcodeproj/
+*.xcworkspace/
+
+# Claude Code local permission state (machine-specific, not shared config).
+.claude/settings.local.json
+
+# Personal per-developer sandbox content (Unreal convention). Currently empty;
+# safe to ignore going forward so scratch/test assets don't get pushed.
+/Content/Developers/
+
+# Nested/duplicate Unreal projects that don't belong in this repo (a full
+# second copy of this game under SOTM/, Epic's MetaHuman sample project, and
+# a raw MetaHuman import package). NOTE: as of 2026-09-16 these are already
+# committed in git history (~8.4 GB across 7,261 tracked files) - adding
+# these lines only stops new changes under them from being staged again. It
+# does NOT remove them from history or shrink the repo; that needs a
+# deliberate `git rm -r --cached` (or a history rewrite) - see CLEANUP.md.
+/SOTM/
+/MetaHumans/
+/AtrisLA-7745294f/
+
+# Debug symbols and temporary editor files.
+*.pdb
+*.ilk
+*.ipch
+*.swp
+*.swo
+*~
+
+# Operating-system metadata.
+.DS_Store
+._*
+[Tt]humbs.db
+[Dd]esktop.ini
+
+# Keep other Content assets (including __ExternalActors__ and
+# __ExternalObjects__), Config, Source, plugin source, .vsconfig,
+# and source artwork.
