@@ -4,6 +4,7 @@
 #include "Components/BoxComponent.h"
 #include "ProgressionSubsystem.h"
 #include "UpgradeDefinition.h"
+#include "AbilityDefinition.h"
 #include "Engine/GameInstance.h"
 
 ASOTMStation::ASOTMStation()
@@ -14,6 +15,20 @@ ASOTMStation::ASOTMStation()
 	BodyVolume->InitBoxExtent(FVector(40.0f, 40.0f, 55.0f));
 	BodyVolume->SetCollisionProfileName(TEXT("BlockAll"));
 	SetRootComponent(BodyVolume);
+}
+
+void ASOTMStation::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (AbilityToRegister)
+	{
+		UGameInstance* GameInstance = GetGameInstance();
+		if (UProgressionSubsystem* Progression = GameInstance ? GameInstance->GetSubsystem<UProgressionSubsystem>() : nullptr)
+		{
+			Progression->RegisterAbilityDefinition(AbilityToRegister);
+		}
+	}
 }
 
 FInteractionOffer ASOTMStation::GetInteractionOffer(const FInteractionRequest& Request) const

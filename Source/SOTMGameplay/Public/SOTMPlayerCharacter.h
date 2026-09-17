@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayTagContainer.h"
 #include "SOTMPlayerCharacter.generated.h"
 
 class UCameraComponent;
@@ -95,6 +96,19 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	/**
+	 * The ASC input adapter (handbook Part 2 section 1): finds the granted
+	 * ability spec whose dynamic tags contain InputTag (stamped there by
+	 * UProgressionSubsystem::ReconcileAbilityGrants from
+	 * UAbilityDefinition::InputTag) and activates it. No-ops if nothing is
+	 * currently granted for that slot. BlueprintCallable (not just a private
+	 * input handler) so a PIE test driver can simulate an ability-slot press
+	 * directly -- there's no way to simulate a real Enhanced Input key press
+	 * through this project's MCP/DSL testing tools.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SOTM|Abilities")
+	void TryActivateAbilityByInputTag(FGameplayTag InputTag);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -116,6 +130,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Input")
 	TObjectPtr<UInputAction> InteractAction;
+
+	/** Handbook Part 2 section 1's IA_AbilityPrimary -- "Slot intent resolved to owned ability ID" via Input.AbilityPrimary. */
+	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Input")
+	TObjectPtr<UInputAction> AbilityPrimaryAction;
+
+	/** Handbook Part 2 section 1's IA_AbilitySecondary -- same adapter, Input.AbilitySecondary. */
+	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Input")
+	TObjectPtr<UInputAction> AbilitySecondaryAction;
 
 	/** The handbook's Part 2 section 1 "interaction scanner" -- native infrastructure, not artist-authored, so it's a CreateDefaultSubobject here rather than left to Blueprint SCS. */
 	UPROPERTY(VisibleAnywhere, Category = "SOTM|Interaction")
@@ -152,6 +174,8 @@ protected:
 	void HandleCrouchPressed();
 	void HandleCrouchReleased();
 	void HandleInteract();
+	void HandleAbilityPrimaryPressed();
+	void HandleAbilitySecondaryPressed();
 
 private:
 	UPROPERTY(Transient)
@@ -170,4 +194,7 @@ private:
 
 	/** Not a UFUNCTION: USOTMAttributeSetHealth::OnHealthDepleted is a native (non-dynamic) multicast delegate, bound via AddUObject rather than AddDynamic. */
 	void HandleHealthDepleted(AActor* OwnerActor);
+
+	/** Debug-only persistent on-screen status readout (wallet, owned upgrades, ability cooldown/active state, movement speed) -- no HUD widget exists yet. Called every Tick. */
+	void PrintDebugStatus();
 };

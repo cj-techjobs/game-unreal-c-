@@ -6,6 +6,7 @@
 #include "ProgressionSubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "Engine/GameInstance.h"
+#include "Engine/Engine.h"
 
 ASOTMCurrencyPickup::ASOTMCurrencyPickup()
 {
@@ -44,6 +45,11 @@ void ASOTMCurrencyPickup::HandleBeginOverlap(UPrimitiveComponent* OverlappedComp
 	if (!Result.bSucceeded)
 	{
 		return;
+	}
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(100, 3.0f, FColor::Yellow, FString::Printf(TEXT("+%lld currency (wallet: %lld)"), RewardAmount, Progression->GetSnapshot().Wallet));
 	}
 
 	MarkConsumedAndHide();

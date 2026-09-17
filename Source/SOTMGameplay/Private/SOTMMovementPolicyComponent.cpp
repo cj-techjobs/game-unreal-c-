@@ -60,7 +60,16 @@ void USOTMMovementPolicyComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	{
 		if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
 		{
-			Movement->MaxWalkSpeed = FMath::FInterpTo(Movement->MaxWalkSpeed, GetTargetSpeed(), DeltaTime, MovementDefinition->SpeedTransitionSpeed);
+			// Set the cap directly rather than easing it toward GetTargetSpeed():
+			// CharacterMovementComponent's own Acceleration/BrakingDeceleration
+			// already ramps actual velocity toward MaxWalkSpeed every tick, so an
+			// extra FInterpTo lag on the cap itself only compounds with that --
+			// two consecutive first-order lags chasing a moving target -- which
+			// is what made a request (sprint, or Speed Boost's multiplier) feel
+			// like it got ignored or reverted instead of ramping up. The engine's
+			// own acceleration curve is the sole, tunable source of ramp feel now
+			// (see UMovementDefinition::Acceleration/BrakingDeceleration).
+			Movement->MaxWalkSpeed = GetTargetSpeed();
 		}
 	}
 
@@ -104,6 +113,11 @@ void USOTMMovementPolicyComponent::SetMovementRestricted(bool bRestricted)
 bool USOTMMovementPolicyComponent::IsSprintToggleMode() const
 {
 	return MovementDefinition && MovementDefinition->bSprintIsToggle;
+}
+
+void USOTMMovementPolicyComponent::SetSpeedBoostMultiplier(float Multiplier)
+{
+	SpeedBoostMultiplier = Multiplier;
 }
 
 FMovementSnapshot USOTMMovementPolicyComponent::GetMovementSnapshot() const
@@ -170,5 +184,6 @@ float USOTMMovementPolicyComponent::GetTargetSpeed() const
 		return 0.0f;
 	}
 
-	return EffectiveGait == EMovementGait::Sprint ? MovementDefinition->SprintSpeed : MovementDefinition->WalkSpeed;
+	const float BaseSpeed = EffectiveGait == EMovementGait::Sprint ? MovementDefinition->SprintSpeed : MovementDefinition->WalkSpeed;
+	return BaseSpeed * SpeedBoostMultiplier;
 }

@@ -19,10 +19,25 @@ void ASOTMChapterGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UGameFlowSubsystem* GameFlow = GetGameInstance() ? GetGameInstance()->GetSubsystem<UGameFlowSubsystem>() : nullptr;
+	UGameInstance* GameInstance = GetGameInstance();
+	UGameFlowSubsystem* GameFlow = GameInstance ? GameInstance->GetSubsystem<UGameFlowSubsystem>() : nullptr;
 	if (!GameFlow)
 	{
 		return;
+	}
+
+	// Handbook Part 1 section 5's boot flow ("New Game creates a new run ID
+	// with five lives") has no menu/New-Game entry point yet in this vertical
+	// slice -- nothing else calls StartNewRun(), so without this a fresh
+	// GameInstance's FProgressionSnapshot sits at its raw default (RemainingLives
+	// 0, no RunId), which silently turns the very first accepted death into a
+	// same-life GameOver instead of a normal retry. Only start one if none
+	// exists yet, so re-entering this GameMode (e.g. a level transition within
+	// the same session) does not stomp an in-progress run's wallet/lives/ranks.
+	UProgressionSubsystem* Progression = GameInstance ? GameInstance->GetSubsystem<UProgressionSubsystem>() : nullptr;
+	if (Progression && !Progression->GetSnapshot().RunId.IsValid())
+	{
+		Progression->StartNewRun();
 	}
 
 	GameFlow->BeginLoading();

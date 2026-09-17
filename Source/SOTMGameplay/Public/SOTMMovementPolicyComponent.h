@@ -63,6 +63,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "SOTM|Movement")
 	bool IsSprintToggleMode() const;
 
+	/**
+	 * Multiplies GetTargetSpeed()'s result; 1.0 = no boost. The sole hook a
+	 * timed ability (USOTMSpeedBoostGameplayAbility) uses to affect movement
+	 * speed, keeping this component the single writer of MaxWalkSpeed
+	 * (handbook Part 2 section 2: "Abilities do not compete by independently
+	 * writing MaxWalkSpeed"). The owning ability is responsible for resetting
+	 * this to 1.0 in its own EndAbility on every terminal path, including
+	 * cancel/interrupt.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SOTM|Movement")
+	void SetSpeedBoostMultiplier(float Multiplier);
+
 private:
 	UPROPERTY()
 	TWeakObjectPtr<ACharacter> OwningCharacter;
@@ -73,6 +85,7 @@ private:
 	bool bSprintLatchedOff = false;
 	float CurrentStamina = 0.0f;
 	float TimeSinceSprintStopped = 0.0f;
+	float SpeedBoostMultiplier = 1.0f;
 
 	EMovementGait ComputeEffectiveGait();
 	void ApplyStaminaForGait(EMovementGait Gait, float DeltaTime);

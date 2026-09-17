@@ -6,6 +6,7 @@
 #include "ProgressionSubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "Engine/GameInstance.h"
+#include "Engine/Engine.h"
 
 ASOTMKeyPickup::ASOTMKeyPickup()
 {
@@ -44,6 +45,11 @@ void ASOTMKeyPickup::HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent
 	if (!Result.bSucceeded)
 	{
 		return;
+	}
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(101, 3.0f, FColor::Cyan, FString::Printf(TEXT("+%d key: %s"), Quantity, *AccessCategory.ToString()));
 	}
 
 	MarkConsumedAndHide();

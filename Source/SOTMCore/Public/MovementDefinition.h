@@ -43,10 +43,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Speed", meta = (ClampMin = "0"))
 	float CrouchSpeed = 200.0f;
 
-	/** FInterpTo rate used to blend MaxWalkSpeed toward its current target when requested gait or stamina-driven effective gait changes. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Speed", meta = (ClampMin = "0"))
-	float SpeedTransitionSpeed = 6.0f;
-
+	/** Maps to UCharacterMovementComponent::MaxAcceleration -- the sole source of speed-change ramp feel (see USOTMMovementPolicyComponent::TickComponent's comment for why MaxWalkSpeed itself is no longer separately eased). Tuned so the largest plausible jump (walk to a boosted sprint) still settles within ~0.5s. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Speed", meta = (ClampMin = "0"))
 	float Acceleration = 2048.0f;
 
@@ -67,8 +64,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stamina", meta = (ClampMin = "0"))
 	float MaxStamina = 100.0f;
 
+	/** 0 means sprint is never stamina-limited -- holding the sprint input keeps sprinting indefinitely. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stamina", meta = (ClampMin = "0"))
-	float StaminaDrainPerSecond = 20.0f;
+	float StaminaDrainPerSecond = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stamina", meta = (ClampMin = "0"))
 	float StaminaRecoveryPerSecond = 15.0f;

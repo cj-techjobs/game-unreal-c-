@@ -71,9 +71,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Enemy|Attack")
 	float AttackDamage = 10.0f;
 
-	/** Distance, forward from the actor, that the attack hit trace sweeps. */
+	/** Distance, forward from the actor, that the attack hit trace sweeps. Kept comfortably beyond BTTask_SOTMChasePlayer's AcceptanceRadius so a completed chase is always within swing reach. */
 	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Enemy|Attack")
-	float AttackTraceDistance = 70.0f;
+	float AttackTraceDistance = 120.0f;
 
 	/** Radius of the attack hit trace's sphere sweep. */
 	UPROPERTY(EditDefaultsOnly, Category = "SOTM|Enemy|Attack")

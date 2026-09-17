@@ -279,6 +279,18 @@ void UProgressionSubsystem::ReconcileAbilityGrants(UAbilitySystemComponent* Abil
 			continue;
 		}
 
-		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass, (*AbilityDefinitionPtr)->AbilityLevel, INDEX_NONE, this));
+		FGameplayAbilitySpec Spec(AbilityClass, (*AbilityDefinitionPtr)->AbilityLevel, INDEX_NONE, this);
+		const FGameplayTag& InputTag = (*AbilityDefinitionPtr)->InputTag;
+		if (InputTag.IsValid())
+		{
+			// Makes UAbilityDefinition::InputTag real: ASOTMPlayerCharacter::
+			// TryActivateAbilityByInputTag resolves a pressed input slot to
+			// whichever ability was granted for it by searching this tag on
+			// each spec, rather than either side hardcoding a specific
+			// ability class (handbook Part 2 section 1's "ASC input adapter").
+			Spec.GetDynamicSpecSourceTags().AddTag(InputTag);
+		}
+
+		AbilitySystemComponent->GiveAbility(Spec);
 	}
 }

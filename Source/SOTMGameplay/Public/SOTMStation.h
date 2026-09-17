@@ -9,6 +9,7 @@
 
 class UBoxComponent;
 class UUpgradeDefinition;
+class UAbilityDefinition;
 
 /**
  * A world purchase station (handbook Part 2 section 7's "station eligibility"
@@ -33,6 +34,8 @@ class SOTMGAMEPLAY_API ASOTMStation : public AActor, public ISOTMInteractable
 public:
 	ASOTMStation();
 
+	virtual void BeginPlay() override;
+
 	virtual FInteractionOffer GetInteractionOffer(const FInteractionRequest& Request) const override;
 	virtual FCommandResult TryInteract(const FInteractionRequest& Request) override;
 	virtual void CancelInteraction(const FOperationId& RequestId) override {}
@@ -41,6 +44,21 @@ protected:
 	/** The single upgrade this station sells. Null means the station is unconfigured and offers nothing. */
 	UPROPERTY(EditAnywhere, Category = "SOTM|Station")
 	TObjectPtr<UUpgradeDefinition> UpgradeToSell;
+
+	/**
+	 * The ability definition UpgradeToSell's GrantedAbilityId resolves to, if
+	 * any. TryPurchaseUpgrade already self-registers UpgradeToSell
+	 * (UProgressionSubsystem::RegisterUpgradeDefinition is the first thing it
+	 * does), but nothing else in real gameplay ever calls
+	 * RegisterAbilityDefinition -- without this, ReconcileAbilityGrants can
+	 * never resolve GrantedAbilityId to an AbilityClass, so a purchase would
+	 * silently debit the wallet and record the rank without ever granting the
+	 * ability. A station is the one place in real gameplay that already knows
+	 * both halves of this link, so it registers both on BeginPlay. Left null
+	 * for upgrades that don't grant an ability (e.g. a passive stat bonus).
+	 */
+	UPROPERTY(EditAnywhere, Category = "SOTM|Station")
+	TObjectPtr<UAbilityDefinition> AbilityToRegister;
 
 	UPROPERTY(VisibleAnywhere, Category = "SOTM|Station")
 	TObjectPtr<UBoxComponent> BodyVolume;

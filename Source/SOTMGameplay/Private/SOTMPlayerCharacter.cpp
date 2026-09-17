@@ -12,12 +12,18 @@
 #include "SOTMMovementPolicyComponent.h"
 #include "SOTMMovementTypes.h"
 #include "AbilitySystemComponent.h"
+#include "GameplayAbilitySpec.h"
 #include "SOTMPlayerState.h"
 #include "SOTMAttributeSetHealth.h"
 #include "ProgressionSubsystem.h"
 #include "SOTMProgressionTypes.h"
 #include "GameFlowSubsystem.h"
 #include "Perception/AISense_Hearing.h"
+#include "SOTMInputTags.h"
+#include "SOTMStatusTags.h"
+#include "SOTMCooldownTags.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Engine/Engine.h"
 
 ASOTMPlayerCharacter::ASOTMPlayerCharacter()
 {
@@ -103,6 +109,68 @@ void ASOTMPlayerCharacter::Tick(float DeltaSeconds)
 		// Next sprint start reports immediately rather than waiting a full interval.
 		TimeSinceLastSprintNoise = SprintNoiseInterval;
 	}
+
+	PrintDebugStatus();
+}
+
+void ASOTMPlayerCharacter::PrintDebugStatus()
+{
+	if (!GEngine)
+	{
+		return;
+	}
+
+	// Debug-only persistent status readout (no HUD widget exists yet).
+	// Re-printed every tick with a short duration and fixed keys so each line
+	// overwrites in place rather than stacking or going stale.
+	if (UProgressionSubsystem* Progression = GetGameInstance() ? GetGameInstance()->GetSubsystem<UProgressionSubsystem>() : nullptr)
+	{
+		const FProgressionSnapshot Snapshot = Progression->GetSnapshot();
+
+		GEngine->AddOnScreenDebugMessage(200, 0.2f, FColor::Yellow, FString::Printf(TEXT("Wallet: %lld"), Snapshot.Wallet));
+
+		if (Snapshot.OwnedUpgradeRanks.Num() > 0)
+		{
+			TArray<FString> Owned;
+			for (const TPair<FName, int32>& RankPair : Snapshot.OwnedUpgradeRanks)
+			{
+				if (RankPair.Value > 0)
+				{
+					Owned.Add(FString::Printf(TEXT("%s x%d"), *RankPair.Key.ToString(), RankPair.Value));
+				}
+			}
+			GEngine->AddOnScreenDebugMessage(201, 0.2f, FColor::Yellow, TEXT("Owned: ") + (Owned.Num() > 0 ? FString::Join(Owned, TEXT(", ")) : TEXT("none")));
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(201, 0.2f, FColor::Yellow, TEXT("Owned: none"));
+		}
+	}
+
+	if (ASOTMPlayerState* PS = GetPlayerState<ASOTMPlayerState>())
+	{
+		if (USOTMAttributeSetHealth* HealthSet = PS->GetHealthAttributeSet())
+		{
+			GEngine->AddOnScreenDebugMessage(204, 0.2f, FColor::Red, FString::Printf(TEXT("Health: %.0f / %.0f"), HealthSet->K2_GetHealth(), HealthSet->K2_GetMaxHealth()));
+		}
+	}
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	{
+		const bool bBoosted = ASC->HasMatchingGameplayTag(TAG_State_SpeedBoosted);
+		const bool bSpeedBoostCooldown = ASC->HasMatchingGameplayTag(TAG_Cooldown_SpeedBoost);
+		const bool bLightningCooldown = ASC->HasMatchingGameplayTag(TAG_Cooldown_LightningThrow);
+		GEngine->AddOnScreenDebugMessage(202, 0.2f, FColor::Cyan, FString::Printf(
+			TEXT("SpeedBoost: %s | LightningThrow: %s"),
+			bBoosted ? TEXT("ACTIVE") : (bSpeedBoostCooldown ? TEXT("cooldown") : TEXT("ready")),
+			bLightningCooldown ? TEXT("cooldown") : TEXT("ready")));
+	}
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		GEngine->AddOnScreenDebugMessage(203, 0.2f, FColor::Green, FString::Printf(
+			TEXT("MaxWalkSpeed: %.0f | Actual velocity: %.0f"), Movement->MaxWalkSpeed, GetVelocity().Size()));
+	}
 }
 
 void ASOTMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -138,13 +206,26 @@ void ASOTMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		{
 			EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &ASOTMPlayerCharacter::HandleInteract);
 		}
+		if (AbilityPrimaryAction)
+		{
+			EnhancedInput->BindAction(AbilityPrimaryAction, ETriggerEvent::Started, this, &ASOTMPlayerCharacter::HandleAbilityPrimaryPressed);
+		}
+		if (AbilitySecondaryAction)
+		{
+			EnhancedInput->BindAction(AbilitySecondaryAction, ETriggerEvent::Started, this, &ASOTMPlayerCharacter::HandleAbilitySecondaryPressed);
+		}
 	}
 }
 
 void ASOTMPlayerCharacter::HandleMove(const FInputActionValue& Value)
 {
 	const FVector2D MoveValue = Value.Get<FVector2D>();
-	const FRotationMatrix ControlRotMatrix(GetControlRotation());
+	// Yaw only: the full control rotation's forward axis tilts with camera
+	// pitch, so its horizontal component (and therefore ground speed) shrinks
+	// to cos(pitch) of the input magnitude while looking up/down -- the right
+	// axis of that same rotation stays horizontal regardless of pitch, which
+	// is why only forward/back was ever affected, not strafing.
+	const FRotationMatrix ControlRotMatrix(FRotator(0.0f, GetControlRotation().Yaw, 0.0f));
 
 	AddMovementInput(ControlRotMatrix.GetUnitAxis(EAxis::Y), MoveValue.X);
 	AddMovementInput(ControlRotMatrix.GetUnitAxis(EAxis::X), MoveValue.Y);
@@ -205,6 +286,44 @@ void ASOTMPlayerCharacter::HandleInteract()
 	if (InteractionComponent)
 	{
 		InteractionComponent->TryInteractWithCurrentTarget();
+	}
+}
+
+void ASOTMPlayerCharacter::HandleAbilityPrimaryPressed()
+{
+	TryActivateAbilityByInputTag(TAG_Input_AbilityPrimary);
+}
+
+void ASOTMPlayerCharacter::HandleAbilitySecondaryPressed()
+{
+	TryActivateAbilityByInputTag(TAG_Input_AbilitySecondary);
+}
+
+void ASOTMPlayerCharacter::TryActivateAbilityByInputTag(FGameplayTag InputTag)
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC || !InputTag.IsValid())
+	{
+		return;
+	}
+
+	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
+		{
+			const bool bActivated = ASC->TryActivateAbility(Spec.Handle);
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(104, 2.0f, bActivated ? FColor::Green : FColor::Orange,
+					FString::Printf(TEXT("Ability %s: %s"), *InputTag.ToString(), bActivated ? TEXT("activated") : TEXT("blocked (cooldown/stunned?)")));
+			}
+			return;
+		}
+	}
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(104, 2.0f, FColor::Red, FString::Printf(TEXT("No ability owned for %s -- buy it at a station first"), *InputTag.ToString()));
 	}
 }
 

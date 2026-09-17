@@ -15,3 +15,6 @@
  * SOTMGameplay across the module boundary.
  */
 extern SOTMCORE_API FNativeGameplayTag TAG_State_Stunned;
+
+/** Granted by USOTMSpeedBoostGameplayEffect for its duration (handbook Part 2 section 3.1's Speed Boost "timed movement multiplier"). Observable fact + anti-restack guard (USOTMSpeedBoostGameplayAbility adds it to ActivationBlockedTags); the actual speed number is applied through USOTMMovementPolicyComponent::SetSpeedBoostMultiplier, not read from this tag, to keep MaxWalkSpeed's single-writer rule intact. */
+extern SOTMCORE_API FNativeGameplayTag TAG_State_SpeedBoosted;

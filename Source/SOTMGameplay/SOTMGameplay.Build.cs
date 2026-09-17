@@ -13,7 +13,8 @@ public class SOTMGameplay : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"SOTMCore",
-			"GameplayAbilities"
+			"GameplayAbilities",
+			"GameplayTasks"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
